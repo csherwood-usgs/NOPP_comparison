@@ -268,4 +268,33 @@ def calc_TM02_1d( m0, m2 ):
     return np.sqrt(m0/m2)
     
 
-#def calc_DSPR_2d( spec2d, 
+def calc_kh( w, h ):
+    """
+    Quick iterative calculation of kh in gravity-wave dispersion relationship
+    
+    kh = calc_kh(w, h )
+    
+    Input
+        w - angular wave frequency = 2*pi/T where T = wave period [1/s]
+        h - water depth [m]
+    Returns
+        kh - wavenumber * depth [ ]
+
+    Orbital velocities from kh are accurate to 3e-12 !
+
+    RL Soulsby (2006) \"Simplified calculation of wave orbital velocities\"
+    HR Wallingford Report TR 155, February 2006
+    Eqns. 12a - 14
+    """
+    g = 9.81
+    x = w**2.0 *h/g
+    y = np.sqrt(x) * (x<1.) + x *(x>=1.)
+    # this appalling bit of code is a tiny bit faster than a loop
+    t = np.tanh( y )
+    y = y-( (y*t -x)/(t+y*(1.0-t**2.0)))
+    t = np.tanh( y )
+    y = y-( (y*t -x)/(t+y*(1.0-t**2.0)))
+    t = np.tanh( y )
+    y = y-( (y*t -x)/(t+y*(1.0-t**2.0)))
+    kh = y
+    return kh
