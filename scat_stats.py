@@ -22,6 +22,7 @@ def calc_HH( S, O ):
     """
     return np.sqrt( np.nansum( ( S - O )**2 ) / np.nansum( S*O ) )
 
+
 def calc_bias( S, O, verbose=False ):
     """Equation MBCM 6
     Units are same as input.
@@ -85,7 +86,7 @@ def calc_lag_corr( mod, obs, delta_t, verbose=False):
     mod = mod - np.mean(mod)
     
     # Compute standard deviations
-    std_obs = np.std(obs)
+    std_obs = np.std(obs)f
     std_mod = np.std(mod)
     
     # Compute cross-correlation
