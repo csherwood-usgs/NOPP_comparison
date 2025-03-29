@@ -66,8 +66,7 @@ class wl_stats:
                 f"NRMSE: {self.NRMSE:.4f}\nWSS: {self.WSS:.4f}\n"
                 f"Zero-lag Correlation: {self.zero_lag_corr:.4f}\nMax Correlation: {self.max_corr:.4f} at Lag {self.max_lag} s\n"
                 f"Observed Peak: {self.obs_peak_value:.4f} at {self.obs_peak_time}\n"
-                f"Modeled Peak: {self.pred_peak_value:.4f} at {self.pred_peak_time}\n"
-                f"Number of valid pairs: {self.N}")
+                f"Modeled Peak: {self.pred_peak_value:.4f} at {self.pred_peak_time}\n")
 
     def write_csv(self, filename):
         stats = {
