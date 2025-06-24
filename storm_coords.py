@@ -21,33 +21,6 @@ def haversine(lon1, lat1, lon2, lat2, radius=6371.):
     km = radius * c
     return km
 
-def haversine2(lon1, lat1, lon2, lat2, radius=6371.0):
-    """
-    Calculate the great circle distance between two points on Earth in kilometers.
-    Uses the Haversine formula. Inputs in decimal degrees.
-    
-    Args:
-        lon1, lat1, lon2, lat2: Coordinates in decimal degrees (scalar or array-like).
-        radius: Radius of Earth (default 6371 km for kilometers).
-    
-    Returns:
-        Great-circle distance in kilometers.
-
-    ChatGPT says this is slightly more efficient.
-    TODO: This is untested...test it and replace earlier version.
-    """
-    lon1, lat1, lon2, lat2 = map(np.radians, [lon1, lat1, lon2, lat2])
-    
-    dlon = lon2 - lon1
-    dlat = lat2 - lat1
-    
-    sin_dlat = np.sin(dlat / 2.0)
-    sin_dlon = np.sin(dlon / 2.0)
-    a = sin_dlat**2 + np.cos(lat1) * np.cos(lat2) * sin_dlon**2
-    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
-    
-    return radius * c
-
 
 def get_bearing(lon1, lat1, lon2, lat2):
     #https://stackoverflow.com/questions/54873868/python-calculate-bearing-between-two-lat-long
