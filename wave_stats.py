@@ -14,6 +14,123 @@ Magnusson, A. K., Jensen, R., & Swail, V. (2021). Spectral shapes and parameters
 """
 import numpy as np
 
+def calc_kh( w, h ):
+    """
+    Quick iterative calculation of kh in gravity-wave dispersion relationship
+    
+    kh = calc_kh(w, h )
+    
+    Input
+        w - angular wave frequency = 2*pi/T where T = wave period [1/s]
+        h - water depth [m]
+    Returns
+        kh - wavenumber * depth [ ]
+
+    Orbital velocities from kh are accurate to 3e-12 !
+
+    RL Soulsby (2006) \"Simplified calculation of wave orbital velocities\"
+    HR Wallingford Report TR 155, February 2006
+    Eqns. 12a - 14
+    """
+    g = 9.81
+    x = w**2.0 *h/g
+    y = np.sqrt(x) * (x<1.) + x *(x>=1.)
+    # this appalling bit of code is a tiny bit faster than a loop
+    t = np.tanh( y )
+    y = y-( (y*t -x)/(t+y*(1.0-t**2.0)))
+    t = np.tanh( y )
+    y = y-( (y*t -x)/(t+y*(1.0-t**2.0)))
+    t = np.tanh( y )
+    y = y-( (y*t -x)/(t+y*(1.0-t**2.0)))
+    kh = y
+    return kh
+
+
+def calc_cp_cg( w, h ):
+    """ 
+    Calculate phase celerity and group celerity from radian frequency w = 2pi/T and water depth h
+    """
+    g = 9.81
+    kh = calc_kh( w, h )
+    k = kh/h
+    cp = np.sqrt( (g/k)*np.tanh( kh ) )
+    n = 0.5 * ( 1. + 2*kh/np.sinh( 2 * kh ) )
+    cg = n * cp
+    return cp, cg
+
+
+def calc_E( Hs ):
+    """
+    Calculate wave energy per unit area of sea surface
+    (Joules / m2 )
+    """
+    g = 9.81
+    rhow = 1.025
+    E = rhow * g * Hs**2 / 8.
+    return E
+
+
+def calc_Eflux( Hs, Tp, h ):
+    """
+    Calculate wave energy flux
+    (Watts/m)
+    """
+    w = 2 * np.pi / Tp
+    E = calc_E ( Hs )
+    cp, cg = calc_cp_cg( w, h )
+    F = E * cg
+    return F
+
+
+def calc_EfluxS( Eflux_mag, Eflux_dir, normal_x, normal_y ):
+    """
+    Calculate shoreward component of energy flux
+    Eflux_mag, Eflux_dir are magnitude and direction (towards) of wave energy flux, 0 - 360 degrees, geographic convention
+    normal_x and normal_y are east and north components of shoreward unit vector
+    """
+    Fx, Fy = xycoord( Eflux_mag, Eflux_dir )
+    Fs = normal_x * Fx + normal_y * Fy
+    return Fs
+
+
+def bilinear_interpolation(distances, values):
+    """
+    Bilinear interpolation function using pre-calculated distances
+    """
+    # Inverse of the distances as weights
+    weights = 1 / distances
+    total_weight = np.sum(weights)
+    
+    # Normalize the weights to sum to 1
+    normalized_weights = weights / total_weight
+    
+    # Perform bilinear interpolation as a weighted average of the near values
+    avg_value = np.sum(normalized_weights * values)
+    
+    return avg_value
+
+
+def direction_bilinear_interpolation(distances, dirs):
+    """
+    Bilinear interpolation function for geographic directions
+    """
+    # Inverse of the distances as weights
+    weights = 1 / distances
+    total_weight = np.sum(weights)
+    
+    # Normalize the weights to sum to 1
+    normalized_weights = weights / total_weight
+    
+    # Convert geographic directions to unit vector (x = east, y = north)
+    x, y = xycoord( np.ones_like( dirs ), dirs )
+    
+    # Perform bilinear interpolation as a weighted average of the near values
+    avg_x = np.sum(normalized_weights * x)
+    avg_y = np.sum(normalized_weights * y)
+    _, avg_dir = pcoord( avg_x, avg_y )
+
+    return avg_dir
+
 def integrate_in_frequency(data_field, frequencies, faxis=0):
     return np.trapz(data_field, frequencies, axis=faxis).squeeze()
 
@@ -266,35 +383,3 @@ def calc_TM01_1d( spec1d, frequencies, faxis=0 ):
 def calc_TM02_1d( m0, m2 ):
     # Mean wave period (s) based on second moment (s)
     return np.sqrt(m0/m2)
-    
-
-def calc_kh( w, h ):
-    """
-    Quick iterative calculation of kh in gravity-wave dispersion relationship
-    
-    kh = calc_kh(w, h )
-    
-    Input
-        w - angular wave frequency = 2*pi/T where T = wave period [1/s]
-        h - water depth [m]
-    Returns
-        kh - wavenumber * depth [ ]
-
-    Orbital velocities from kh are accurate to 3e-12 !
-
-    RL Soulsby (2006) \"Simplified calculation of wave orbital velocities\"
-    HR Wallingford Report TR 155, February 2006
-    Eqns. 12a - 14
-    """
-    g = 9.81
-    x = w**2.0 *h/g
-    y = np.sqrt(x) * (x<1.) + x *(x>=1.)
-    # this appalling bit of code is a tiny bit faster than a loop
-    t = np.tanh( y )
-    y = y-( (y*t -x)/(t+y*(1.0-t**2.0)))
-    t = np.tanh( y )
-    y = y-( (y*t -x)/(t+y*(1.0-t**2.0)))
-    t = np.tanh( y )
-    y = y-( (y*t -x)/(t+y*(1.0-t**2.0)))
-    kh = y
-    return kh
