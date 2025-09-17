@@ -95,12 +95,25 @@ def read_swan_spec(path, h=30., normx=0.7071, normy=0.7071 ):
     ND = None
     freq = None
     direc = None
+    lon = None
+    lat = None
 
     i = 0
     while i < n:
         u = lines[i].strip().upper()
 
-        # Absolute frequencies header; NF on next non-empty line; then NF floats
+        # Location block: "LONLAT"
+        if u.startswith("LONLAT"):
+            i = _next_nonempty(lines, i + 1)   # skip "number of locations"
+            nloc = int(lines[i].strip().split()[0])
+            if nloc != 1:
+                raise ValueError(f"Expected 1 location, got {nloc}")
+            i = _next_nonempty(lines, i + 1)
+            lon, lat = [float(v) for v in lines[i].split()[:2]]
+            i += 1
+            continue
+
+        # Absolute frequencies header
         if u.startswith(("AFREQ", "FREQ", "RFREQ")):
             i = _next_nonempty(lines, i + 1)
             m = re.match(r"^\s*(\d+)", lines[i])
@@ -110,7 +123,7 @@ def read_swan_spec(path, h=30., normx=0.7071, normy=0.7071 ):
             freq, i = _read_block_floats(lines, i + 1, NF)
             continue
 
-        # Direction header; ND on next non-empty line; then ND floats
+        # Direction header
         if u.startswith(("CDIR", "DIR", "CGRID")):
             i = _next_nonempty(lines, i + 1)
             m = re.match(r"^\s*(\d+)", lines[i])
@@ -203,14 +216,19 @@ def read_swan_spec(path, h=30., normx=0.7071, normy=0.7071 ):
             S2d=(("time", "freq", "dir"), S2d),
         ),
         coords=dict(
-            time=time, freq=freq, dir=direc
+            time=time,
+            freq=freq,
+            dir=direc,
+            lon=lon,
+            lat=lat,
         ),
         attrs=dict(
             source="SWAN .spec reader (QUANT once, repeated date-and-time blocks; FACTOR-scaled)",
-            units_S2d=units_2d,  # e.g., 'm2/Hz/degr'
+            units_S2d=units_2d,
             quantity=qname
         )
     )
+
 
     # Angle convertsion boolean
     units = (units_2d or "").lower()
