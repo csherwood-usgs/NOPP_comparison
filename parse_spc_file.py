@@ -178,7 +178,7 @@ def read_swan_spec(path, h=30., normx=0.7071, normy=0.7071 ):
             break  # no more times
         times.append(tstamp)
 
-        # optional FACTOR
+        # scaling FACTOR
         i = _next_nonempty(lines, i)
         factor = 1.0
         if i < n and lines[i].strip().upper().startswith("FACTOR"):
@@ -235,13 +235,23 @@ def read_swan_spec(path, h=30., normx=0.7071, normy=0.7071 ):
     per_degree = ("/deg" in units) or ("/degr" in units) # boolean: True if directional units are degrees
 
     # Derived values: m0, Hm0, m1, Tm01, Tm02
-    if per_degree:
-        # Convert deg bins to radians for integration
-        ds["Ef"]  = (ds.S2d * np.deg2rad(1.0)).integrate("dir").astype("float32")  # m^2/Hz
-        ds["Dth"] = (ds.S2d * np.deg2rad(1.0)).integrate("freq").astype("float32") # m^2 (per rad)
-    else:
-        ds["Ef"]  = ds.S2d.integrate("dir").astype("float32")
-        ds["Dth"] = ds.S2d.integrate("freq").astype("float32")
+    ds["Ef"]  = ds.S2d.integrate("dir").astype("float32")
+    ds["Dth"] = ds.S2d.integrate("freq").astype("float32")
+
+    # Index of peak energy along frequency for each time
+    imax = ds["Ef"].argmax(dim="freq")  # dims: (time,)
+    
+    # Peak frequency and period
+    f_peak = ds["freq"].isel(freq=imax)                # (time,)
+    Tp = (1.0 / f_peak).astype("float32")              # (time,)
+    
+    # Name + attrs
+    Tp = Tp.rename("Tp")
+    Tp.attrs.update(
+        units="s",
+        long_name="Peak period (from direction-integrated energy spectrum Ef)"
+    )
+    ds["Tp"] = Tp
 
     ds["m0"] = ds["Ef"].integrate("freq").astype("float32")
     ds["Hm0"] = (4.0 * np.sqrt(ds["m0"])).astype("float32")                            # m^2
@@ -279,11 +289,7 @@ def read_swan_spec(path, h=30., normx=0.7071, normy=0.7071 ):
     
     # Integrals of Eflux_2d
     #    → along-direction power spectrum P(f) [W/m/Hz]
-    if per_degree:
-        # convert per-degree to per-radian during integration
-        ds['Eflux_f'] = (ds['Eflux_2d'] * np.deg2rad(1.0)).integrate('dir')
-    else:
-        ds['Eflux_f'] = ds['Eflux_2d'].integrate('dir')
+    ds['Eflux_f'] = ds['Eflux_2d'].integrate('dir')
     ds['Eflux_f'].attrs.update(units='W m^-1 Hz^-1', long_name='direction-integrated wave power spectrum')
     
     #    → along-frequency directional power P(θ) [W/m/rad] (or W/m/deg if you keep per-degree)
@@ -295,10 +301,7 @@ def read_swan_spec(path, h=30., normx=0.7071, normy=0.7071 ):
     ds['Eflux_dir'].attrs['long_name'] = 'frequency-integrated wave power by direction'
     
     #    → total wave power per unit crest length [W/m]
-    if per_degree:
-        total_power = (ds['Eflux_dir'] * np.deg2rad(1.0)).integrate('dir')
-    else:
-        total_power = ds['Eflux_dir'].integrate('dir')
+    total_power = ds['Eflux_dir'].integrate('dir')
     total_power = total_power.rename('Eflux_total')
     total_power.attrs.update(units='W m^-1', long_name='total wave power per unit crest length')
     ds['Eflux_total'] = total_power
