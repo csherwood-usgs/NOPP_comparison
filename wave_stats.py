@@ -63,6 +63,9 @@ def calc_E( Hs ):
     """
     Calculate wave energy per unit area of sea surface
     (Joules / m2 )
+
+    Input:
+    Hs - Significant wave height (m)
     """
     g = 9.81
     rhow = 1025.0
@@ -72,9 +75,10 @@ def calc_E( Hs ):
 
 def calc_Eflux( Hs, Tp, h ):
     """
-    Calculate wave energy flux
-    (Watts/m)
+    Depth-integrated wave energy flux per unit crest length
+    (W/m)
     """
+
     w = 2 * np.pi / Tp
     E = calc_E ( Hs )
     cp, cg = calc_cp_cg( w, h )
