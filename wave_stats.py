@@ -65,7 +65,7 @@ def calc_E( Hs ):
     (Joules / m2 )
     """
     g = 9.81
-    rhow = 1.025
+    rhow = 1025.0
     E = rhow * g * Hs**2 / 8.
     return E
 
