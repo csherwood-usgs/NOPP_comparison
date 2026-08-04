@@ -86,7 +86,7 @@ def calc_lag_corr( mod, obs, delta_t, verbose=False):
     mod = mod - np.mean(mod)
     
     # Compute standard deviations
-    std_obs = np.std(obs)f
+    std_obs = np.std(obs)
     std_mod = np.std(mod)
     
     # Compute cross-correlation
@@ -134,6 +134,21 @@ def calc_WSS( S, O ):
     # Calculate Willmott's Skill Score
     wss = 1 - (numerator / denominator)
     return wss
+
+
+def calc_stats5( S, O ):
+    """N, Bias, RMSD, r, WSS for finite S,O pairs.
+    Returns dict.
+    """
+    ok = np.isfinite(S) & np.isfinite(O)
+    S, O = S[ok], O[ok]
+    return {
+        "N": len(S),
+        "Bias": calc_bias(S, O),
+        "RMSD": calc_RMSE(S, O),
+        "r": calc_rho(S, O),
+        "WSS": calc_WSS(S, O),
+    }
 
 
 def scat_stats_array( S, O ):
