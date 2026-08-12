@@ -13,6 +13,7 @@ from scipy.signal import correlate
 
 # Statistics from MBCM
 # Menaschi et al. (2013) Problems in RMSE-based wave model validations" Ocean Modeling 72:53-58.
+# Circular stats proposed by Claude Sonnet 4.6
 
 def calc_HH( S, O ):
     """Equation MBCM 22
@@ -151,6 +152,62 @@ def calc_stats5( S, O ):
     }
 
 
+# csherwood@usgs.gov, 2026-08-11, generated with Sonnet 4.6
+def calc_stats5_dir(obs, model):
+    """
+    Circular equivalents of N, Bias, RMSD, r, WSS for direction (deg, 0-360, wraparound-aware).
+    """
+    obs = np.asarray(obs, dtype=float)
+    model = np.asarray(model, dtype=float)
+
+    good = np.isfinite(obs) & np.isfinite(model)
+    obs = obs[good]
+    model = model[good]
+    N = len(obs)
+
+    if N == 0:
+        return {"N": 0, "Bias": np.nan, "RMSD": np.nan, "r": np.nan, "WSS": np.nan}
+
+    def cdiff(a, b):
+        return ((a - b + 180.) % 360.) - 180.
+
+    d = cdiff(model, obs)
+
+    Bias = np.degrees(np.arctan2(np.mean(np.sin(np.radians(d))),
+                                  np.mean(np.cos(np.radians(d)))))
+    RMSD = np.sqrt(np.mean(d**2))
+
+    obs_mean = np.degrees(np.arctan2(np.mean(np.sin(np.radians(obs))),
+                                      np.mean(np.cos(np.radians(obs))))) % 360.
+    dP = np.abs(cdiff(model, obs_mean))
+    dO = np.abs(cdiff(obs, obs_mean))
+    denom = np.sum((dP + dO)**2)
+    WSS = 1. - np.sum(d**2) / denom if denom > 0 else np.nan
+
+    r = circ_corr(obs, model)
+
+    return {"N": N, "Bias": Bias, "RMSD": RMSD, "r": r, "WSS": WSS}
+    
+
+# also from Claude Sonnet 5
+def circ_corr(obs, model):
+    """Circular correlation coefficient, input in degrees.
+    Jammalamadaka, S.R. & Sarma, Y.R., 1988, "A correlation coefficient for angular variables," 
+    in Statistical Theory and Data Analysis II, North-Holland, pp. 349–364; 
+    also Jammalamadaka & SenGupta, Topics in Circular Statistics, World Scientific, 2001, Ch. 8.2)
+    """
+    obs_r = np.radians(obs)
+    model_r = np.radians(model)
+
+    obs_mean = np.arctan2(np.mean(np.sin(obs_r)), np.mean(np.cos(obs_r)))
+    model_mean = np.arctan2(np.mean(np.sin(model_r)), np.mean(np.cos(model_r)))
+
+    so = np.sin(obs_r - obs_mean)
+    sm = np.sin(model_r - model_mean)
+
+    return np.sum(so * sm) / np.sqrt(np.sum(so**2) * np.sum(sm**2))
+
+    
 def scat_stats_array( S, O ):
     S = S.flatten()
     O = O.flatten()
